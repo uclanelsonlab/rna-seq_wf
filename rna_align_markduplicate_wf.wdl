@@ -1,8 +1,10 @@
 version 1.0
 
+import "tasks/fastp.wdl" as fastp_task
 import "tasks/star_align_reads.wdl" as star_align_reads_task
 import "tasks/samtools_index.wdl" as samtools_index_task
 import "tasks/picard_markduplicates.wdl" as picard_markduplicates_task
+import "tasks/gatk.wdl" as gatk_task
 
 workflow rna_align_markduplicate_wf {
     meta {
@@ -26,6 +28,10 @@ workflow rna_align_markduplicate_wf {
             description: "TAR zip reference files from Gencode",
             extension: ".tar.gz"
         }
+        fastp_docker: {
+            description: "TAR zip docker image from fastp stored on DNAnexus (file-)",
+            extension: ".tar.gz"
+        }
         star_docker: {
             description: "TAR zip docker image from STAR stored on DNAnexus (file-GVjJgfQ02k8bYxZ9z70g869k)",
             extension: ".tar.gz"
@@ -39,27 +45,43 @@ workflow rna_align_markduplicate_wf {
         }
     }
     input {
-        # star_align_reads
+        File fasta
+        File fasta_fai
+        File fasta_dict
+        # fastp/star_align_reads
         String prefix
         File fastq_r1
         File fastq_r2
         File star_index
+        String? fastp_docker
         String? star_docker
         String? gatk_docker
+        String? samtools_docker
         # STAR options
         Int? runThreadN
         Int? sjdbOverhang
         Int? limitBAMsortRAM
         Int? outBAMsortingThreadN
+        # gatk
+        File dbsnp138
+        File known_indels
+        File indels_1kG
+        File af_only_gnomad
+        File small_exac_common_3
+    }
 
-        # samtools_vw_filter
-        String? samtools_docker
+    call fastp_task.fastp_stats as fastp_stats {
+        input:
+            fastq_r1=fastq_r1,
+            fastq_r2=fastq_r2,
+            prefix=prefix,
+            fastp_docker=fastp_docker
     }
 
     call star_align_reads_task.align_reads as align_reads {
         input:
-            fastq_r1=fastq_r1,
-            fastq_r2=fastq_r2,
+            fastq_r1=fastp_stats.trimm_r1,
+            fastq_r2=fastp_stats.trimm_r2,
             prefix=prefix,
             star_index=star_index,
             star_docker=star_docker
@@ -82,8 +104,87 @@ workflow rna_align_markduplicate_wf {
             samtools_docker=samtools_docker
     }
 
+    call gatk_task.gatk_SplitNCigarReads as gatk_SplitNCigarReads {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            bam=picard_marked_dup.marked_bam,
+            bai=samtools_filter_2.bai,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_BaseRecalibrator {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            bam=gatk_SplitNCigarReads.bam_split_cigar,
+            bai=gatk_SplitNCigarReads.bai_split_cigar,
+            dbsnp138=dbsnp138,
+            known_indels=known_indels,
+            indels_1kG=indels_1kG,
+            af_only_gnomad=af_only_gnomad,
+            small_exac_common_3=small_exac_common_3,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_ApplyBQSR as gatk_ApplyBQSR {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            bam=gatk_SplitNCigarReads.bam_split_cigar,
+            bai=gatk_SplitNCigarReads.bai_split_cigar,
+            recal_data=gatk_BaseRecalibrator.recal_data,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }    
+
+    call gatk_task.gatk_AnalyzeCovariates as gatk_AnalyzeCovariates {
+        input:
+            recal_data=gatk_BaseRecalibrator.recal_data,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_HaplotypeCaller as gatk_HaplotypeCaller {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            bam=gatk_ApplyBQSR.bqsr_bam,
+            bai=gatk_ApplyBQSR.bqsr_bai,
+            dbsnp138=dbsnp138,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_GenotypeGVCFs as gatk_GenotypeGVCFs {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            hc_gvcf=gatk_HaplotypeCaller.hc_gvcf,
+            hc_gvcf_index=gatk_HaplotypeCaller.hc_gvcf_index,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_VariantFiltration as gatk_VariantFiltration {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            hc_vcf=gatk_GenotypeGVCFs.hc_vcf,
+            hc_vcf_index=gatk_GenotypeGVCFs.hc_vcf_index,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
     output {
-        # align_reads
         File star_bam = align_reads.star_bam
         File sjdb_txt = align_reads.sjdb_txt
         File sjdb_tab = align_reads.sjdb_tab
@@ -92,8 +193,15 @@ workflow rna_align_markduplicate_wf {
         File junctions_pass1 = align_reads.junctions_pass1
         File junctions_pass1_log = align_reads.junctions_pass1_log
         Array[File] logs = align_reads.logs
-        # samtools_vw_filter
-        File bam = picard_marked_dup.marked_bam
         File bai = samtools_filter_2.bai
+        File bqsr_bam = gatk_ApplyBQSR.bqsr_bam
+        File bqsr_bai = gatk_ApplyBQSR.bqsr_bai
+        File analyze_pdf = gatk_AnalyzeCovariates.analyze_pdf
+        File hc_gvcf = gatk_HaplotypeCaller.hc_gvcf
+        File hc_gvcf_index = gatk_HaplotypeCaller.hc_gvcf_index
+        File hc_vcf = gatk_GenotypeGVCFs.hc_vcf
+        File hc_vcf_index = gatk_GenotypeGVCFs.hc_vcf_index
+        File filtered_vcf = gatk_VariantFiltration.filtered_vcf
+        File filtered_vcf_index = gatk_VariantFiltration.filtered_vcf_index
     }
 }
