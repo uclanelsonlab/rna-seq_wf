@@ -12,12 +12,14 @@ task picard_marked_dup {
         File bam
         File bai
         String prefix
+        String? java_mem
         String? picard_docker
     }
+    String actual_java_mem=select_first([java_mem, "-Xmx20g"])
     String actual_picard_docker=select_first([picard_docker, "broadinstitute/picard:2.27.5"])
     command {
         set -uexo pipefail
-        java "-Xmx12g" -jar /usr/picard/picard.jar MarkDuplicates \
+        java ~{actual_java_mem} -jar /usr/picard/picard.jar MarkDuplicates \
             -I ~{bam} \
             -O ~{prefix}.marked_duplicates.bam \
             -M ~{prefix}.marked_dup_metrics.txt
@@ -34,7 +36,7 @@ task picard_marked_dup {
                 ExecutionError: 2,
             }
         }
-        dx_timeout: "15H30M"
+        dx_timeout: "10H30M"
         dx_access: object {
             network: ["*"],
             developer: true

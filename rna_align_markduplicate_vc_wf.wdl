@@ -7,8 +7,9 @@ import "tasks/picard_markduplicates.wdl" as picard_markduplicates_task
 import "tasks/picard.wdl" as picard_task
 import "tasks/qualimap.wdl" as qualimap_task
 import "tasks/multiqc.wdl" as multiqc_task
+import "tasks/gatk.wdl" as gatk_task
 
-workflow rna_align_markduplicate_wf {
+workflow rna_align_markduplicate_vc_wf {
     meta {
         author: "George Carvalho"
         email: "gcarvalhoneto@mednet.ucla.edu"
@@ -132,6 +133,85 @@ workflow rna_align_markduplicate_wf {
             picard_docker = gatk_docker
     }
 
+    call gatk_task.gatk_SplitNCigarReads as gatk_SplitNCigarReads {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            bam=picard_marked_dup.marked_bam,
+            bai=samtools_filter_2.bai,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_BaseRecalibrator {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            bam=gatk_SplitNCigarReads.bam_split_cigar,
+            bai=gatk_SplitNCigarReads.bai_split_cigar,
+            dbsnp138=dbsnp138,
+            known_indels=known_indels,
+            indels_1kG=indels_1kG,
+            af_only_gnomad=af_only_gnomad,
+            small_exac_common_3=small_exac_common_3,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_ApplyBQSR as gatk_ApplyBQSR {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            bam=gatk_SplitNCigarReads.bam_split_cigar,
+            bai=gatk_SplitNCigarReads.bai_split_cigar,
+            recal_data=gatk_BaseRecalibrator.recal_data,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }    
+
+    call gatk_task.gatk_AnalyzeCovariates as gatk_AnalyzeCovariates {
+        input:
+            recal_data=gatk_BaseRecalibrator.recal_data,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_HaplotypeCaller as gatk_HaplotypeCaller {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            bam=gatk_ApplyBQSR.bqsr_bam,
+            bai=gatk_ApplyBQSR.bqsr_bai,
+            dbsnp138=dbsnp138,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_GenotypeGVCFs as gatk_GenotypeGVCFs {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            hc_gvcf=gatk_HaplotypeCaller.hc_gvcf,
+            hc_gvcf_index=gatk_HaplotypeCaller.hc_gvcf_index,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
+
+    call gatk_task.gatk_VariantFiltration as gatk_VariantFiltration {
+        input: 
+            fasta=fasta,
+            fasta_fai=fasta_fai,
+            fasta_dict=fasta_dict,
+            hc_vcf=gatk_GenotypeGVCFs.hc_vcf,
+            hc_vcf_index=gatk_GenotypeGVCFs.hc_vcf_index,
+            prefix=prefix,
+            gatk_docker=gatk_docker
+    }
     call multiqc_task.multiqc_array as multiqc {
         input:
             stats_files = [
@@ -139,6 +219,7 @@ workflow rna_align_markduplicate_wf {
                 fastp_stats.fastp_json, 
                 qualimap_rnaseq.qualimapReport,
                 qualimap_rnaseq.qualimap_results,
+                gatk_AnalyzeCovariates.analyze_pdf,
                 picard_CollectMultipleMetrics.alignment_summary_metrics,
                 picard_CollectMultipleMetrics.base_distribution_by_cycle,
                 picard_CollectMultipleMetrics.base_distribution_by_cycle_metrics,
@@ -164,7 +245,16 @@ workflow rna_align_markduplicate_wf {
         Array[File] logs = align_reads.logs
         File bai = samtools_filter_2.bai
         File qualimapReport = qualimap_rnaseq.qualimapReport
-        File qualimap_results = qualimap_rnaseq.qualimap_results
+        File qualimap_results = qualimap_rnaseq.qualimap_results 
+        File bqsr_bam = gatk_ApplyBQSR.bqsr_bam
+        File bqsr_bai = gatk_ApplyBQSR.bqsr_bai
+        File analyze_pdf = gatk_AnalyzeCovariates.analyze_pdf
+        File hc_gvcf = gatk_HaplotypeCaller.hc_gvcf
+        File hc_gvcf_index = gatk_HaplotypeCaller.hc_gvcf_index
+        File hc_vcf = gatk_GenotypeGVCFs.hc_vcf
+        File hc_vcf_index = gatk_GenotypeGVCFs.hc_vcf_index
+        File filtered_vcf = gatk_VariantFiltration.filtered_vcf
+        File filtered_vcf_index = gatk_VariantFiltration.filtered_vcf_index
         File multiqc_html = multiqc.multiqc_html
         File multiqc_data = multiqc.multiqc_data
     }

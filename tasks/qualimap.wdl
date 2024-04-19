@@ -14,10 +14,16 @@ task qualimap_rnaseq {
         String? qualimap_docker
     }
 
-    Int actual_mem=select_first([mem, "20G"])
+    String actual_mem=select_first([mem, "20G"])
     String actual_qualimap_docker=select_first([qualimap_docker, "quay.io/biocontainers/qualimap:2.2.2d--hdfd78af_2"])
     command {
         set -uexo pipefail
+        if [[ ~{gtf} == *gz ]]
+        then
+            annotation=$(echo ~{gtf} | sed 's/.gz//g');
+            gunzip ~{gtf};
+        else
+            annotation=~{gtf}; fi
         ls ~{bam_index}
         qualimap rnaseq \
             --java-mem-size=~{actual_mem} \
@@ -25,7 +31,7 @@ task qualimap_rnaseq {
             -a proportional \
             -bam ~{bam_file} \
             -p strand-specific-reverse \
-            -gtf ~[gtf]
+            -gtf $annotation
     }
     runtime {
         docker: actual_qualimap_docker
