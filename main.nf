@@ -17,30 +17,30 @@ log.info """\
     """
     .stripIndent(true)
 
-process download_files { 
-    tag "Download ${sample_name} FASTQ and reference files"
-    // publishDir params.outdir, mode:'symlink'
+include { download_fastqs; download_rrna; download_globinrna   } from './modules/download_files.nf'
+include { run_fastp } from './modules/fastp.nf'
+include { filter_fastq } from './modules/filters.nf'
+include { bwa_mem as bwa_mem_rrna } from './modules/bwa.nf'
+include { bwa_mem as bwa_mem_globinrna } from './modules/bwa.nf'
+include { samtools_view as samtools_view_rrna; samtools_flagstat as samtools_flagstat_rrna } from './modules/samtools.nf'
+include { samtools_view as samtools_view_globinrna; samtools_flagstat as samtools_flagstat_globinrna } from './modules/samtools.nf'
+include { check_star_reference } from './modules/star.nf'
 
-    input: 
-    val sample_name
-    val library
-    val fastq_bucket
-    val rib_reference_path
+workflow {
+    download_fastqs_ch = download_fastqs(params.sample_name, params.library, params.fastq_bucket)
+    download_rrna_ch = download_rrna(params.rib_reference_path)
+    download_globinrna_ch = download_globinrna(params.rib_reference_path)
 
-    output:
-    path "${sample_name}*.fastq.gz", emit: fastq_files
-    path "human_rRNA_strict*", emit: rrna_reference_files
-    path "human_globinRNA*", emit: globinrna_reference_files
+    // contamination check
+    fastp_ch = run_fastp(download_fastqs_ch)
+    filtered_fastq_ch = filter_fastq(fastp_ch)
+    rrna_bwa_ch = bwa_mem_rrna(filtered_fastq_ch, download_rrna_ch, "human_rRNA_strict.fasta", "rrna")
+    globinrna_bwa_ch = bwa_mem_globinrna(filtered_fastq_ch, download_globinrna_ch, "human_globinRNA.fa", "globinrna")
+    rrna_samtools_view_ch = samtools_view_rrna(params.sample_name, rrna_bwa_ch, "rrna")
+    globinrna_samtools_view_ch = samtools_view_globinrna(params.sample_name, globinrna_bwa_ch, "globinrna")
+    rrna_samtools_flagstat_ch = samtools_flagstat_rrna(params.sample_name, rrna_samtools_view_ch, "rrna")
+    globinrna_samtools_flagstat_ch = samtools_flagstat_globinrna(params.sample_name, globinrna_samtools_view_ch, "globinrna")
 
-    script: 
-    """
-    aws s3 cp ${fastq_bucket}/${library}/ . --exclude "*" --recursive --include "${sample_name}*"
-    aws s3 cp ${rib_reference_path}/rrna/ . --recursive
-    aws s3 cp ${rib_reference_path}/globinrna/ . --recursive
-    """
-}
-
-workflow { 
-    download_files_ch = download_files(params.sample_name, params.library, params.fastq_bucket, params.rib_reference_path)
-    download_files_ch.view()
+    // STAR alignment
+    star_index_ref = check_star_reference(download_fastqs_ch)
 }
