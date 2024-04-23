@@ -24,7 +24,7 @@ include { bwa_mem as bwa_mem_rrna } from './modules/bwa.nf'
 include { bwa_mem as bwa_mem_globinrna } from './modules/bwa.nf'
 include { samtools_view as samtools_view_rrna; samtools_flagstat as samtools_flagstat_rrna } from './modules/samtools.nf'
 include { samtools_view as samtools_view_globinrna; samtools_flagstat as samtools_flagstat_globinrna } from './modules/samtools.nf'
-include { check_star_reference } from './modules/star.nf'
+include { check_star_reference; star_alignreads } from './modules/star.nf'
 
 workflow {
     download_fastqs_ch = download_fastqs(params.sample_name, params.library, params.fastq_bucket)
@@ -42,5 +42,6 @@ workflow {
     globinrna_samtools_flagstat_ch = samtools_flagstat_globinrna(params.sample_name, globinrna_samtools_view_ch, "globinrna")
 
     // STAR alignment
-    star_index_ref = check_star_reference(download_fastqs_ch)
+    star_index_ref_ch = check_star_reference(download_fastqs_ch)
+    star_alignreads_ch = star_alignreads(star_index_ref_ch, params.sample_name, fastp_ch)
 }

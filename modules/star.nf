@@ -6,7 +6,7 @@ process check_star_reference {
 
     output:
     path "star_index", emit: star_index
-    val sjdb_overhang
+    val ${sjdb_overhang}
     
     script:
     """
@@ -44,5 +44,34 @@ process check_star_reference {
 
     aws s3 cp \${star_index} .
     mkdir -p star_index/ && tar -xvf \$(basename \${star_index}) -C star_index/
+    """
+}
+
+process star_alignreads {
+    container "quay.io/biocontainers/samtools:1.19.1--h50ea8bc_0"
+    cpus 10
+    tag "Run STAR alignReads"
+    publishDir params.outdir, mode:'symlink'
+
+    input:
+    path reference
+    val sjdb_overhang
+    tuple val(meta), path(reads)
+    tuple val(meta), path(json)
+    tuple val(meta), path(html)
+    tuple val(meta), path(log)
+
+    output:
+    path "./star_output//${meta}.ReadsPerGene.out.tab.gz", emit: reads_gene
+    path "./star_output//${meta}.ReadsPerGene.log.out ", emit: reads_gene_log
+    path "./star_output//${meta}.Log.final.out", emit: final_log
+    path "./star_output//${meta}.SJ.out.tab.gz", emit: sj_tab
+    path "./star_output/${meta}.Aligned.sortedByCoord.out.bam", emit: star_bam
+    path "./star_output/${meta}.Aligned.sortedByCoord.out.bam", emit: star_bam
+
+    script:
+    """
+    sort_mem=`head -n1 /proc/meminfo | awk '{print int($2*1000*0.90)}'`
+    STAR --runMode alignReads --runThreadN $task.cpus --genomeDir ${reference} --twopassMode Basic --sjdbOverhang ${sjdb_overhang} --readFilesIn ${reads[0]} ${reads[1]} --readFilesCommand zcat --outFileNamePrefix ${meta} --alignSoftClipAtReferenceEnds Yes --quantMode GeneCounts --outSAMtype BAM SortedByCoordinate --outBAMcompression -1 --outSAMunmapped Within --genomeLoad NoSharedMemory --limitBAMsortRAM \${sort_mem} --outBAMsortingThreadN $task.cpus --outSAMattrRGline ID:rg1 SM:${meta} PL:Illumina LB:${meta}
     """
 }
