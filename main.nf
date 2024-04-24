@@ -22,7 +22,7 @@ include { run_fastp } from './modules/fastp.nf'
 include { filter_fastq } from './modules/filters.nf'
 include { bwa_mem as bwa_mem_rrna } from './modules/bwa.nf'
 include { bwa_mem as bwa_mem_globinrna } from './modules/bwa.nf'
-include { samtools_view as samtools_view_rrna; samtools_flagstat as samtools_flagstat_rrna } from './modules/samtools.nf'
+include { samtools_view as samtools_view_rrna; samtools_flagstat as samtools_flagstat_rrna; samtools_index } from './modules/samtools.nf'
 include { samtools_view as samtools_view_globinrna; samtools_flagstat as samtools_flagstat_globinrna } from './modules/samtools.nf'
 include { check_star_reference; star_alignreads } from './modules/star.nf'
 

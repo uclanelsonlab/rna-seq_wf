@@ -36,3 +36,24 @@ process samtools_flagstat {
     """
 
 }
+
+process samtools_index {
+    container "quay.io/biocontainers/samtools:1.19.1--h50ea8bc_0"
+    tag "Samtools index on $bam"
+
+    input:
+    path reads_gene
+    path reads_gene_log
+    path final_log
+    path sj_tab
+    path bam
+
+    output:
+    path "${bam}.bai", emit: bam_index
+    
+    script:
+    """
+    samtools index ${bam}
+    """
+
+}
