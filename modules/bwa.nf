@@ -1,6 +1,6 @@
 process bwa_mem {
     container "biocontainers/bwa:v0.7.17_cv1"
-    cpus 6
+    cpus 12
     tag "BWA mem on $reference for $meta"
 
     input:

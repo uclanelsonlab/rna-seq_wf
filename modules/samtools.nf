@@ -1,6 +1,6 @@
 process samtools_view {
     container "quay.io/biocontainers/samtools:1.19.1--h50ea8bc_0"
-    cpus 6
+    cpus 12
     tag "Samtools view on $meta"
 
     input:
