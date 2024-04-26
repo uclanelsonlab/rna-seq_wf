@@ -15,34 +15,19 @@ process download_fastqs {
     """
 }
 
-process download_rrna {
-    tag "Download rRNA files"
+process download_rna_ref {
+    tag "Download rna reference files"
 
     input:
-    val rib_reference_path
+    val rna_reference_path
+    val type
 
     output:
-    path "rrna_reference", emit: rrna_reference_dir
+    path "${type}_reference", emit: rrna_reference_dir
 
     script:
     """
-    mkdir rrna_reference
-    aws s3 cp ${rib_reference_path}/rrna/ rrna_reference/ --recursive
-    """
-}
-
-process download_globinrna {
-    tag "Download globinRNA files"
-
-    input:
-    val rib_reference_path
-
-    output:
-    path "globinrna_reference", emit: globinrna_reference_dir
-
-    script:
-    """
-    mkdir globinrna_reference
-    aws s3 cp ${rib_reference_path}/globinrna/ globinrna_reference/ --recursive
+    mkdir ${type}_reference
+    aws s3 cp ${rna_reference_path}/${type}/ ${type}_reference/ --recursive
     """
 }

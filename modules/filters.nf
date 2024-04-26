@@ -9,7 +9,7 @@ process filter_fastq {
     tuple val(meta), path(log)
 
     output:
-    tuple val(meta), path(reads), emit: reads
+    tuple val(meta), path('*.4kreads.fastq.gz') , emit: reads
 
     script:
     """

@@ -1,9 +1,10 @@
-#!/usr/bin/env nextflow
+nextflow.enable.dsl = 2
 
 params.sample_name = 'NB-8204-M-muscle'
 params.library = "SN_7RNA_S-24-0479_XA044"
 params.fastq_bucket = "s3://ucla-rare-diseases/UCLA-UDN/rnaseq/fastq"
 params.rib_reference_path = "s3://ucla-rare-diseases/UCLA-UDN/assets/reference"
+params.gencode_gtf_path = "s3://ucla-rare-diseases/UCLA-UDN/alden_test/resources/gencode.v19.protein_coding.gtf"
 params.outdir = "results"
 
 log.info """\
@@ -17,19 +18,19 @@ log.info """\
     """
     .stripIndent(true)
 
-include { download_fastqs; download_rrna; download_globinrna   } from './modules/download_files.nf'
+include { download_fastqs; download_rna_ref as download_rrna; download_rna_ref as download_globinrna   } from './modules/download_files.nf'
 include { run_fastp } from './modules/fastp.nf'
 include { filter_fastq } from './modules/filters.nf'
-include { bwa_mem as bwa_mem_rrna } from './modules/bwa.nf'
-include { bwa_mem as bwa_mem_globinrna } from './modules/bwa.nf'
+include { bwa_mem as bwa_mem_rrna; bwa_mem as bwa_mem_globinrna } from './modules/bwa.nf'
 include { samtools_view as samtools_view_rrna; samtools_flagstat as samtools_flagstat_rrna; samtools_index } from './modules/samtools.nf'
 include { samtools_view as samtools_view_globinrna; samtools_flagstat as samtools_flagstat_globinrna } from './modules/samtools.nf'
 include { check_star_reference; star_alignreads } from './modules/star.nf'
+include { samtools_view_sj } from './modules/bam2sj/main.nf'
 
 workflow {
     download_fastqs_ch = download_fastqs(params.sample_name, params.library, params.fastq_bucket)
-    download_rrna_ch = download_rrna(params.rib_reference_path)
-    download_globinrna_ch = download_globinrna(params.rib_reference_path)
+    download_rrna_ch = download_rrna(params.rib_reference_path, "rrna")
+    download_globinrna_ch = download_globinrna(params.rib_reference_path, "globinrna")
 
     // contamination check
     fastp_ch = run_fastp(download_fastqs_ch)
@@ -44,4 +45,9 @@ workflow {
     // STAR alignment
     star_index_ref_ch = check_star_reference(download_fastqs_ch)
     star_alignreads_ch = star_alignreads(params.sample_name, star_index_ref_ch, fastp_ch)
+    samtools_index(star_alignreads_ch)
+
+    // Create SJ tab file
+    samtools_view_sj(params.sample_name, star_alignreads_ch)
+    
 }
