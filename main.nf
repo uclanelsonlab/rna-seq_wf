@@ -25,7 +25,7 @@ include { bwa_mem as bwa_mem_rrna; bwa_mem as bwa_mem_globinrna } from './module
 include { samtools_view as samtools_view_rrna; samtools_flagstat as samtools_flagstat_rrna; samtools_index } from './modules/samtools.nf'
 include { samtools_view as samtools_view_globinrna; samtools_flagstat as samtools_flagstat_globinrna; samtools_view_sj } from './modules/samtools.nf'
 include { check_star_reference; star_alignreads } from './modules/star.nf'
-include { bam2sj } from './modules/bam2sj.nf'
+include { bam2sj } from './modules/bam2sj/main.nf'
 
 workflow {
     download_fastqs_ch = download_fastqs(params.sample_name, params.library, params.fastq_bucket)

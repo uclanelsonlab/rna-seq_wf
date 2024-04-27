@@ -1,10 +1,8 @@
 process bam2sj {
     tag "Create SJ from BAM for $meta"
-    container "gvcn/bam2sj:v0.0.2"
-    cache false
 
     input:
-    path meta
+    val meta
     path sam_view
 
     output:
@@ -12,7 +10,7 @@ process bam2sj {
 
     script:
     """
-    perl bam2sj.pl ${sam_view} | sort -k1,1 -k2,2n > ${meta}.bam2SJ.out.tab
+    bam2sj.pl ${sam_view} > ${meta}.bam2SJ.out.tab
     gzip ${meta}.bam2SJ.out.tab
     """
 }
