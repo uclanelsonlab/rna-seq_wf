@@ -1,11 +1,15 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
+
 use Data::Dumper;
 
 $minmapq=255;
-
 my $HoS = {};
 
-while (<>) {
+my $sam_view = $ARGV[0];
+
+open(my $fh, '<', $sam_view) or die "Cannot open input file $sam_view";
+
+while (<$fh>) {
     if ($_ =~ /^@/) {
         next;
     }
@@ -57,6 +61,8 @@ while (<>) {
         }
     }
 }
+close $fh;
+
 while (($key, $counts) = each (%HoS)) {
     ( my $t = $key ) =~ s/_/\t/g;
     print "$t\t$counts\n";

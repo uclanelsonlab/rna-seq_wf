@@ -23,9 +23,9 @@ include { run_fastp } from './modules/fastp.nf'
 include { filter_fastq } from './modules/filters.nf'
 include { bwa_mem as bwa_mem_rrna; bwa_mem as bwa_mem_globinrna } from './modules/bwa.nf'
 include { samtools_view as samtools_view_rrna; samtools_flagstat as samtools_flagstat_rrna; samtools_index } from './modules/samtools.nf'
-include { samtools_view as samtools_view_globinrna; samtools_flagstat as samtools_flagstat_globinrna } from './modules/samtools.nf'
+include { samtools_view as samtools_view_globinrna; samtools_flagstat as samtools_flagstat_globinrna; samtools_view_sj } from './modules/samtools.nf'
 include { check_star_reference; star_alignreads } from './modules/star.nf'
-include { samtools_view_sj } from './modules/bam2sj/main.nf'
+include { bam2sj } from './modules/bam2sj.nf'
 
 workflow {
     download_fastqs_ch = download_fastqs(params.sample_name, params.library, params.fastq_bucket)
@@ -48,6 +48,6 @@ workflow {
     samtools_index(star_alignreads_ch)
 
     // Create SJ tab file
-    samtools_view_sj(params.sample_name, star_alignreads_ch)
-    
+    sam_ch = samtools_view_sj(params.sample_name, star_alignreads_ch) 
+    sj_tab_ch = bam2sj(params.sample_name, sam_ch)
 }

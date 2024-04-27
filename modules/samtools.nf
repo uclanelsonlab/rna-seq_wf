@@ -55,5 +55,27 @@ process samtools_index {
     """
     samtools index ${bam}
     """
+}
 
+process samtools_view_sj {
+    container "quay.io/biocontainers/samtools:1.19.1--h50ea8bc_0"
+    cpus 12
+    tag "Samtools view on $meta for stdout"
+    publishDir params.outdir, mode:'symlink'
+
+    input:
+    val meta
+    path reads_gene
+    path reads_gene_log
+    path final_log
+    path sj_tab
+    path star_bam
+
+    output:
+    path "tmp_${meta}_bamview.sam", emit: sam_view
+    
+    script:
+    """
+    samtools view -@ $task.cpus -h ${star_bam} > tmp_${meta}_bamview.sam
+    """
 }
