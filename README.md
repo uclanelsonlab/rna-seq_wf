@@ -8,7 +8,7 @@ git clone https://github.com/uclanelsonlab/rna-seq_wf.git
 - Run the pipeline for your sample, it expects the FASTQ files to be at `s3://ucla-rare-diseases/UCLA-UDN/rnaseq/fastq` to download
 ```bash
 cd nl-rna-seq_wf/
-nextflow run main.nf --sample_name SH1311-P-muscle --library SN_7RNA_S-24-0479_XA044 -with-report SH1311-P-muscle.html
+nextflow run main.nf --sample_name SH1311-P-muscle --library SN_7RNA_S-24-0479_XA044
 ```
 
 - Check if you have your outputs on S3:
