@@ -31,3 +31,24 @@ process download_rna_ref {
     aws s3 cp ${rna_reference_path}/${type}/ ${type}_reference/ --recursive
     """
 }
+
+process download_human_ref {
+    tag "Download rna reference files"
+
+    input:
+    val fasta
+    val fai
+    val dict
+
+    output:
+    path "human_g1k_v37.fasta", emit: human_fasta
+    path "human_g1k_v37.fasta.fai", emit: human_fai
+    path "human_g1k_v37.dict", emit: human_dict
+
+    script:
+    """
+    aws s3 cp ${fasta} .
+    aws s3 cp ${fai} .
+    aws s3 cp ${dict} .
+    """
+}

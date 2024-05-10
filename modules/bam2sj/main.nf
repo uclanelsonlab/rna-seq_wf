@@ -1,5 +1,6 @@
 process bam2sj {
     tag "Create SJ from BAM for $meta"
+    publishDir params.outdir, mode:'symlink'
 
     input:
     val meta

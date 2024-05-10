@@ -28,13 +28,12 @@ process samtools_flagstat {
     val reference
 
     output:
-    path "${meta}_${reference}.flagstat.txt", emit: view_bam
+    path "${meta}_${reference}.flagstat.txt", emit: flagstat_file
     
     script:
     """
     samtools flagstat ${view_bam} > ${meta}_${reference}.flagstat.txt
     """
-
 }
 
 process samtools_index {
@@ -77,5 +76,33 @@ process samtools_view_sj {
     script:
     """
     samtools view -@ $task.cpus -h ${star_bam} > tmp_${meta}_bamview.sam
+    """
+}
+
+process samtools_cram {
+    container "quay.io/biocontainers/samtools:1.19.1--h50ea8bc_0"
+    cpus 12
+    tag "Samtools view on $meta BAM to CRAM"
+    publishDir params.outdir, mode:'symlink'
+
+    input:
+    val meta
+    path fasta
+    path fai
+    path dict
+    path reads_gene
+    path reads_gene_log
+    path final_log
+    path sj_tab
+    path bam
+
+    output:
+    path "${meta}.hg19_rna.normal.cram", emit: rna_cram
+    path "${meta}.hg19_rna.normal.cram.crai", emit: rna_crai
+    
+    script:
+    """
+    samtools view -@ $task.cpus -T ${fasta} -C --output-fmt-option normal -o ${meta}.hg19_rna.normal.cram ${bam}
+    samtools index -@ $task.cpus ${meta}.hg19_rna.normal.cram
     """
 }

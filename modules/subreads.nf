@@ -1,29 +1,17 @@
-process gtf_download {
-    tag "Download reference GTF file for subread featureCounts"   
-
-    input:
-    path gencode_gtf_path
-
-    output:
-    path "${meta}.gene_id.exon.ct", emit: gene_counts
-    path "${meta}.gene_id.exon.ct.short.txt", emit: gene_counts_short
-    path "${meta}.gene_id.exon.ct.summary", emit: gene_counts_summary
-
-    script:
-    """
-    aws s3 cp ${gencode_gtf_path} .s
-    """
-}
-
 process subread_featurecounts {
+    tag "Generate counts by gene using featureCounts"
     container "quay.io/biocontainers/subread:2.0.6--he4a0461_0"
-    cpus 32
-    tag "Subreads featureCounts on $meta"   
+    cpus 12
+    publishDir params.outdir, mode:'symlink'
 
     input:
     val meta
-    path gencode_gtf
-    path rna_bam
+    path gencode_pc
+    path reads_gene
+    path reads_gene_log
+    path final_log
+    path sj_tab
+    path bam
 
     output:
     path "${meta}.gene_id.exon.ct", emit: gene_counts
@@ -32,7 +20,22 @@ process subread_featurecounts {
 
     script:
     """
-    featureCounts -T 4 -t exon -g gene_id -a ${gencode_gtf} -o ${meta}.gene_id.exon.ct -p -C --primary ${rna_bam}
-    awk -F $' ' 'BEGIN {OFS=FS} { print \$1, \$7 }' ${meta}.gene_id.exon.ct > ${meta}.gene_id.exon.ct.short.txt
+    featureCounts -T $task.cpus -t exon -g gene_id -a ${gencode_pc} -o ${meta}.gene_id.exon.ct -p -C --primary ${bam}
+    awk -F \$' ' 'BEGIN {OFS=FS} { print \$1, \$7 }' ${meta}.gene_id.exon.ct > ${meta}.gene_id.exon.ct.short.txt
+    """
+}
+
+process download_gencode {
+    tag "Download reference GTF file for subread featureCounts"
+
+    input:
+    val gencode_gtf_path
+
+    output:
+    path "gencode.protein_coding.gtf", emit: gencode_pc
+
+    script:
+    """
+    aws s3 cp ${gencode_gtf_path} gencode.protein_coding.gtf
     """
 }

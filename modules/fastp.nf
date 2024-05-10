@@ -2,6 +2,7 @@ process run_fastp {
     container "quay.io/biocontainers/fastp:0.23.3--h5f740d0_0"
     cpus 36
     tag "Fastp on $meta"
+    publishDir params.outdir, mode:'symlink'
 
     input:
     tuple val(meta), path(reads)
