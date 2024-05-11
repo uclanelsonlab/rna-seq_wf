@@ -48,7 +48,7 @@ process check_star_reference {
 }
 
 process star_alignreads {
-    container "gvcn/star:2.6.0c"
+    conda 'bioconda::star=2.6.0c'
     cpus 32
     publishDir params.outdir, mode:'symlink'
     tag "STAR alignReads on $meta"   
