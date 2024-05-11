@@ -52,8 +52,7 @@ process star_alignreads {
     cpus 32
     publishDir params.outdir, mode:'symlink'
     tag "STAR alignReads on $meta"   
-    publishDir params.outdir, mode:'symlink'
-
+    
     input:
     val meta
     val reference
