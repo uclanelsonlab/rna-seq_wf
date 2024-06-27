@@ -21,7 +21,7 @@ log.info """\
     """
     .stripIndent(true)
 
-include { download_fastqs; download_human_ref } from './modules/download_files.nf'
+include { download_fastqs; download_rna_ref as download_rrna; download_rna_ref as download_globinrna; download_human_ref } from './modules/download_files.nf'
 include { run_fastp } from './modules/fastp.nf'
 include { filter_fastq } from './modules/filters.nf'
 include { bwa_mem as bwa_mem_rrna; bwa_mem as bwa_mem_globinrna } from './modules/bwa.nf'
