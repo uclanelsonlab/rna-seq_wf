@@ -15,6 +15,23 @@ process download_fastqs {
     """
 }
 
+process download_rna_ref {
+    tag "Download rna reference files"
+
+    input:
+    val rna_reference_path
+    val type
+
+    output:
+    path "${type}_reference", emit: rrna_reference_dir
+
+    script:
+    """
+    mkdir ${type}_reference
+    aws s3 cp ${rna_reference_path}/${type}/ ${type}_reference/ --recursive
+    """
+}
+
 process download_human_ref {
     tag "Download rna reference files"
 
@@ -24,9 +41,9 @@ process download_human_ref {
     val dict
 
     output:
-    path "GRCh38.primary_assembly.genome.fa", emit: human_fasta
-    path "GRCh38.primary_assembly.genome.fa.fai", emit: human_fai
-    path "GRCh38.primary_assembly.genome.dict", emit: human_dict
+    path "human_g1k_v37.fasta", emit: human_fasta
+    path "human_g1k_v37.fasta.fai", emit: human_fai
+    path "human_g1k_v37.dict", emit: human_dict
 
     script:
     """
