@@ -41,9 +41,9 @@ process download_human_ref {
     val dict
 
     output:
-    path "human_g1k_v37.fasta", emit: human_fasta
-    path "human_g1k_v37.fasta.fai", emit: human_fai
-    path "human_g1k_v37.dict", emit: human_dict
+    path "GRCh38.primary_assembly.genome.fa", emit: human_fasta
+    path "GRCh38.primary_assembly.genome.fa.fai", emit: human_fai
+    path "GRCh38.primary_assembly.genome.dict", emit: human_dict
 
     script:
     """
