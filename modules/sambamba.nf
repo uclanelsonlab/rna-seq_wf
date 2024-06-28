@@ -1,5 +1,5 @@
 process SAMBAMBA_MARKDUP {
-    container "biocontainers/sambamba:1.0.1--h6f6fda4_0"
+    container "quay.io/biocontainers/sambamba:1.0.1--h6f6fda4_1"
     cpus 40
     tag "Running sambamba markdup on $meta"
     publishDir params.outdir, mode:'symlink'
@@ -13,9 +13,9 @@ process SAMBAMBA_MARKDUP {
     path bam
 
     output:
-    path "${meta}.markdup.bam", emit: marked_bam
-    path "${meta}.markdup.bai", emit: marked_bai, optional: true
-    path "versions.yml"           , emit: versions
+    path "${meta}.markdup.bam"      , emit: marked_bam
+    path "${meta}.markdup.bai"      , emit: marked_bai, optional: true
+    path "versions.yml"             , emit: versions
 
     when:
     task.ext.when == null || task.ext.when

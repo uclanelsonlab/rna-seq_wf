@@ -7,6 +7,7 @@ process filter_fastq {
     tuple val(meta), path(json)
     tuple val(meta), path(html)
     tuple val(meta), path(log)
+    path versions
 
     output:
     tuple val(meta), path('*.4kreads.fastq.gz') , emit: reads

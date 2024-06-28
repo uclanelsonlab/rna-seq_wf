@@ -8,7 +8,6 @@ process subread_featurecounts {
     val meta
     path gencode_pc
     path bam
-    path bai
     path versions
 
     output:

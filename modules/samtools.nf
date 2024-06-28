@@ -92,7 +92,6 @@ process samtools_cram {
     path fai
     path dict
     path bam
-    path bai
     path versions
 
     output:
