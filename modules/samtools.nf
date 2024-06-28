@@ -92,7 +92,8 @@ process samtools_cram {
     path fai
     path dict
     path bam
-    path dup_metrics
+    path bai
+    path versions
 
     output:
     path "${meta}.hg38_rna.normal.cram", emit: rna_cram

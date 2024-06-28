@@ -1,7 +1,7 @@
 process run_markdup {
     container "broadinstitute/picard:2.27.5"
     cpus 36
-    tag "Fastp on $meta"
+    tag "Running Picard MarkDuplicates on $meta"
     publishDir params.outdir, mode:'symlink'
 
     input:

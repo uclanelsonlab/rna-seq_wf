@@ -12,9 +12,15 @@ process run_fastp {
     tuple val(meta), path('*.json')           , emit: json
     tuple val(meta), path('*.html')           , emit: html
     tuple val(meta), path('*.log')            , emit: log
+    path "versions.yml"           , emit: versions
     
     script:
     """
     fastp -w $task.cpus -i ${reads[0]} -I ${reads[1]} -o ${meta}_R1.fastp.fastq.gz -O ${meta}_R2.fastp.fastq.gz -j ${meta}.fastp.json -h ${meta}.fastp.html --detect_adapter_for_pe 2> >(tee ${meta}.fastp.log >&2)
+    
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        fastp: \$(echo \$(fastp --version 2>&1) | awk '{print \$2}' )
+    END_VERSIONS
     """
 }

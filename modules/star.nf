@@ -61,6 +61,7 @@ process star_alignreads {
     tuple val(meta), path(json)
     tuple val(meta), path(html)
     tuple val(meta), path(log)
+    path versions
 
     output:
     path "${meta}.ReadsPerGene.out.tab.gz", emit: reads_gene

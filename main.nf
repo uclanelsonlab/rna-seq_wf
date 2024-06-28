@@ -9,6 +9,7 @@ params.outdir = "results"
 params.human_fai = "s3://ucla-rare-diseases/UCLA-UDN/assets/reference/gencode43/GRCh38.p13/GRCh38.primary_assembly.genome.fa.fai"
 params.human_dict = "s3://ucla-rare-diseases/UCLA-UDN/assets/reference/gencode43/GRCh38.p13/GRCh38.primary_assembly.genome.dict"
 params.human_fasta = "s3://ucla-rare-diseases/UCLA-UDN/assets/reference/gencode43/GRCh38.p13/GRCh38.primary_assembly.genome.fa"
+params.output_bucket = "s3://ucla-rare-diseases/UCLA-UDN/Analysis/RNAseq_hg38/"
 
 log.info """\
     R N A - S E Q _ W F   P I P E L I N E
@@ -29,6 +30,7 @@ include { samtools_view as samtools_view_rrna; samtools_flagstat as samtools_fla
 include { samtools_view as samtools_view_globinrna; samtools_flagstat as samtools_flagstat_globinrna } from './modules/samtools.nf'
 include { check_star_reference; star_alignreads } from './modules/star.nf'
 include { run_markdup } from './modules/picard.nf'
+include { SAMBAMBA_MARKDUP } from './modules/sambamba.nf'
 include { download_gencode; subread_featurecounts } from './modules/subreads.nf'
 include { upload_files } from './modules/upload_outputs.nf'
 
@@ -51,7 +53,7 @@ workflow {
     star_index_ref_ch = check_star_reference(download_fastqs_ch)
     star_alignreads_ch = star_alignreads(params.sample_name, star_index_ref_ch, fastp_ch)
     samtools_index(star_alignreads_ch)
-    mark_dup_ch = run_markdup(params.sample_name, star_alignreads_ch)
+    mark_dup_ch = SAMBAMBA_MARKDUP(params.sample_name, star_alignreads_ch)
 
     // Create counts by gene
     gencode_pc_ch = download_gencode(params.gencode_gtf_path)
@@ -62,5 +64,5 @@ workflow {
     cram_ch = samtools_cram(params.sample_name, download_human_ref_ch, mark_dup_ch)
 
     // Upload selected output files
-    // upload_files(params.library, rrna_samtools_flagstat_ch, globinrna_samtools_flagstat_ch, star_alignreads_ch, feature_counts_ch, cram_ch)
+    // upload_files(params.library, params.sample_name, params.output_bucket, rrna_samtools_flagstat_ch, globinrna_samtools_flagstat_ch, star_alignreads_ch, feature_counts_ch, cram_ch)
 }

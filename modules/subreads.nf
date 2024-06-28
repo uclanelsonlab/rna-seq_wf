@@ -8,7 +8,8 @@ process subread_featurecounts {
     val meta
     path gencode_pc
     path bam
-    path dup_metrics
+    path bai
+    path versions
 
     output:
     path "${meta}.gene_id.exon.ct", emit: gene_counts
