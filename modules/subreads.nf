@@ -7,11 +7,8 @@ process subread_featurecounts {
     input:
     val meta
     path gencode_pc
-    path reads_gene
-    path reads_gene_log
-    path final_log
-    path sj_tab
     path bam
+    path dup_metrics
 
     output:
     path "${meta}.gene_id.exon.ct", emit: gene_counts

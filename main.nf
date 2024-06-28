@@ -28,6 +28,7 @@ include { bwa_mem as bwa_mem_rrna; bwa_mem as bwa_mem_globinrna } from './module
 include { samtools_view as samtools_view_rrna; samtools_flagstat as samtools_flagstat_rrna; samtools_index; samtools_cram } from './modules/samtools.nf'
 include { samtools_view as samtools_view_globinrna; samtools_flagstat as samtools_flagstat_globinrna } from './modules/samtools.nf'
 include { check_star_reference; star_alignreads } from './modules/star.nf'
+include { run_markdup } from './modules/picard.nf'
 include { download_gencode; subread_featurecounts } from './modules/subreads.nf'
 include { upload_files } from './modules/upload_outputs.nf'
 
@@ -50,14 +51,15 @@ workflow {
     star_index_ref_ch = check_star_reference(download_fastqs_ch)
     star_alignreads_ch = star_alignreads(params.sample_name, star_index_ref_ch, fastp_ch)
     samtools_index(star_alignreads_ch)
+    mark_dup_ch = run_markdup(params.sample_name, star_alignreads_ch)
 
     // Create counts by gene
     gencode_pc_ch = download_gencode(params.gencode_gtf_path)
-    feature_counts_ch = subread_featurecounts(params.sample_name, gencode_pc_ch, star_alignreads_ch)
+    feature_counts_ch = subread_featurecounts(params.sample_name, gencode_pc_ch, mark_dup_ch)
 
     // Create CRAM files
     download_human_ref_ch = download_human_ref(params.human_fasta, params.human_fai, params.human_dict)
-    cram_ch = samtools_cram(params.sample_name, download_human_ref_ch, star_alignreads_ch)
+    cram_ch = samtools_cram(params.sample_name, download_human_ref_ch, mark_dup_ch)
 
     // Upload selected output files
     // upload_files(params.library, rrna_samtools_flagstat_ch, globinrna_samtools_flagstat_ch, star_alignreads_ch, feature_counts_ch, cram_ch)

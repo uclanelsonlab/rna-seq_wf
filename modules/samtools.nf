@@ -1,6 +1,6 @@
 process samtools_view {
     container "quay.io/biocontainers/samtools:1.19.1--h50ea8bc_0"
-    cpus 12
+    cpus 20
     tag "Samtools view on $meta"
 
     input:
@@ -38,6 +38,7 @@ process samtools_flagstat {
 
 process samtools_index {
     container "quay.io/biocontainers/samtools:1.19.1--h50ea8bc_0"
+    cpus 20
     tag "Samtools index on $bam"
 
     input:
@@ -52,13 +53,13 @@ process samtools_index {
     
     script:
     """
-    samtools index ${bam}
+    samtools index -@ $task.cpus ${bam}
     """
 }
 
 process samtools_view_sj {
     container "quay.io/biocontainers/samtools:1.19.1--h50ea8bc_0"
-    cpus 12
+    cpus 20
     tag "Samtools view on $meta for stdout"
     publishDir params.outdir, mode:'symlink'
 
@@ -81,7 +82,7 @@ process samtools_view_sj {
 
 process samtools_cram {
     container "quay.io/biocontainers/samtools:1.19.1--h50ea8bc_0"
-    cpus 12
+    cpus 40
     tag "Samtools view on $meta BAM to CRAM"
     publishDir params.outdir, mode:'symlink'
 
@@ -90,19 +91,16 @@ process samtools_cram {
     path fasta
     path fai
     path dict
-    path reads_gene
-    path reads_gene_log
-    path final_log
-    path sj_tab
     path bam
+    path dup_metrics
 
     output:
-    path "${meta}.hg19_rna.normal.cram", emit: rna_cram
-    path "${meta}.hg19_rna.normal.cram.crai", emit: rna_crai
+    path "${meta}.hg38_rna.normal.cram", emit: rna_cram
+    path "${meta}.hg38_rna.normal.cram.crai", emit: rna_crai
     
     script:
     """
-    samtools view -@ $task.cpus -T ${fasta} -C --output-fmt-option normal -o ${meta}.hg19_rna.normal.cram ${bam}
-    samtools index -@ $task.cpus ${meta}.hg19_rna.normal.cram
+    samtools view -@ $task.cpus -T ${fasta} -C --output-fmt-option normal -o ${meta}.hg38_rna.normal.cram ${bam}
+    samtools index -@ $task.cpus ${meta}.hg38_rna.normal.cram
     """
 }
