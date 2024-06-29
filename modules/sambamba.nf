@@ -5,26 +5,30 @@ process SAMBAMBA_MARKDUP {
     publishDir params.outdir, mode:'symlink'
 
     input:
-    val meta
-    path reads_gene
-    path reads_gene_log
-    path final_log
-    path sj_tab
-    path bam
+    tuple val(meta), path(reads_gene)
+    tuple val(meta), path(reads_gene_log)
+    tuple val(meta), path(final_log)
+    tuple val(meta), path(sj_tab)
+    tuple val(meta), path(bam)
+    tuple val(meta), path(log)
+    path versions
 
     output:
-    path "${meta}.markdup.bam"      , emit: marked_bam
-    path "${meta}.markdup.bai"      , emit: marked_bai, optional: true
-    path "versions.yml"             , emit: versions
+    tuple val(meta), path("*.markdup.bam"), emit: marked_bam
+    tuple val(meta), path('*.log'),         emit: log
+    path("*versions.yml"),                  emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
-    """
-    sambamba markdup -t $task.cpus --tmpdir ./ $bam ${meta}.markdup.bam
+    def args = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: "${meta}"
 
-    cat <<-END_VERSIONS > versions.yml
+    """
+    sambamba markdup -t $task.cpus --tmpdir ./ $bam ${prefix}.markdup.bam 2> >(tee ${prefix}.markdup.log >&2)
+
+    cat <<-END_VERSIONS > sambamba_versions.yml
     "${task.process}":
         sambamba: \$(echo \$(sambamba --version 2>&1) | awk '{print \$2}' )
     END_VERSIONS

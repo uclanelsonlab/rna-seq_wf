@@ -12,19 +12,19 @@ process bwa_mem {
     output:
     tuple val(meta), path("*.bwa.bam"), emit: bwa_bam
     tuple val(meta), path('*.log'),     emit: log
-    path "versions.yml",                emit: versions
+    path "*versions.yml",                emit: versions
     
     when:
     task.ext.when == null || task.ext.when
 
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def prefix = task.ext.prefix ?: "${meta}"
 
     """
     bwa mem -t $task.cpus ${reference_dir}/${fasta} ${reads[0]} ${reads[1]} > ${prefix}_${reference}.bwa.bam 2> >(tee ${prefix}.bwa.log >&2)
 
-    cat <<-END_VERSIONS > versions.yml
+    cat <<-END_VERSIONS > bwa_versions.yml
     "${task.process}":
         bwa: \$(echo \$(bwa --version 2>&1) | awk '{print \$2}' )
     END_VERSIONS

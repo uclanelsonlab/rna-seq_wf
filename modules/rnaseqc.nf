@@ -5,33 +5,33 @@ process RNASEQC {
     publishDir params.outdir, mode:'symlink'
 
     input:
-    val meta
     path gencode_gtf
-    path bam
-    path versions
+    tuple val(meta), path(bam)
+    tuple val(meta), path(log)
+    path(versions)
 
     output:
-    tuple val(meta), path("*.coverage.tsv"),        emit: coverage
-    tuple val(meta), path("*.exon_cv.tsv"),         emit: exon_cv
-    tuple val(meta), path("*.exon_reads.gct"),      emit: exon_reads
-    tuple val(meta), path("*.gene_fragments.gct"),  emit: gene_fragments
-    tuple val(meta), path("*.gene_reads.gct"),      emit:gene_reads 
-    tuple val(meta), path("*.gene_tpm.gct"),        emit: gene_tpm
-    tuple val(meta), path("*.metrics.tsv"),         emit: metrics
-    tuple val(meta), path('*.log'),                 emit: log
-    path "versions.yml",                            emit: versions
+    path "*.coverage.tsv",        emit: coverage
+    path "*.exon_cv.tsv",         emit: exon_cv
+    path "*.exon_reads.gct",      emit: exon_reads
+    path "*.gene_fragments.gct",  emit: gene_fragments
+    path "*.gene_reads.gct",      emit: gene_reads 
+    path "*.gene_tpm.gct",        emit: gene_tpm
+    path "*.metrics.tsv",         emit: metrics
+    path '*.log',                 emit: log
+    path "*versions.yml",         emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def prefix = task.ext.prefix ?: "${meta}"
 
     """
     rnaseqc ${gencode_gtf} ${bam} --coverage . 2> >(tee ${prefix}.rnaseqc.log >&2)
 
-    cat <<-END_VERSIONS > versions.yml
+    cat <<-END_VERSIONS > rnaseqc_versions.yml
     "${task.process}":
         rnaseqc: \$(echo \$(rnaseqc --version 2>&1) | awk '{print \$2}' )
     END_VERSIONS

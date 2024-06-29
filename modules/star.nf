@@ -54,7 +54,6 @@ process star_alignreads {
     tag "STAR alignReads on $meta"   
     
     input:
-    val meta
     val reference
     val sjdb_overhang
     tuple val(meta), path(reads)
@@ -64,22 +63,35 @@ process star_alignreads {
     path versions
 
     output:
-    path "${meta}.ReadsPerGene.out.tab.gz", emit: reads_gene
-    path "${meta}.ReadsPerGene.log.out", emit: reads_gene_log
-    path "${meta}.Log.final.out", emit: final_log
-    path "${meta}.SJ.out.tab.gz", emit: sj_tab
-    path "${meta}.Aligned.sortedByCoord.out.bam", emit: star_bam
+    tuple val(meta), path("*.ReadsPerGene.out.tab.gz"),       emit: reads_gene
+    tuple val(meta), path("*.ReadsPerGene.log.out"),          emit: reads_gene_log
+    tuple val(meta), path("*.Log.final.out"),                 emit: final_log
+    tuple val(meta), path("*.SJ.out.tab.gz"),                 emit: sj_tab
+    tuple val(meta), path("*.Aligned.sortedByCoord.out.bam"), emit: star_bam
+    tuple val(meta), path('*.log'),                           emit: log
+    path "*versions.yml",                                     emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
+    def args = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: "${meta}"
+
     """
-    STAR --runMode alignReads --runThreadN $task.cpus --genomeDir ${reference} --twopassMode Basic --sjdbOverhang ${sjdb_overhang} --readFilesIn ${reads[0]} ${reads[1]} --readFilesCommand zcat --outFileNamePrefix ${meta}. --alignSoftClipAtReferenceEnds Yes --quantMode GeneCounts --outSAMtype BAM SortedByCoordinate --outBAMcompression -1 --outSAMunmapped Within --genomeLoad NoSharedMemory --outBAMsortingThreadN $task.cpus --outSAMattrRGline ID:rg1 SM:${meta} PL:Illumina LB:${meta}
+    STAR --runMode alignReads --runThreadN $task.cpus --genomeDir ${reference} --twopassMode Basic --sjdbOverhang ${sjdb_overhang} --readFilesIn ${reads[0]} ${reads[1]} --readFilesCommand zcat --outFileNamePrefix ${meta}. --alignSoftClipAtReferenceEnds Yes --quantMode GeneCounts --outSAMtype BAM SortedByCoordinate --outBAMcompression -1 --outSAMunmapped Within --genomeLoad NoSharedMemory --outBAMsortingThreadN $task.cpus --outSAMattrRGline ID:rg1 SM:${prefix} PL:Illumina LB:${prefix} 2> >(tee ${prefix}.star.log >&2)
     
-    echo -e "Gene\t${meta}.Unstranded\t${meta}.Antisense\t${meta}.Sense" > tempgene_counts
-    tail -n +5 ${meta}.ReadsPerGene.out.tab >> tempgene_counts
-    echo -e "Gene\t${meta}.Unstranded\t${meta}.Antisense\t${meta}.Sense" > tempgene_stats
-    head -n +4 ${meta}.ReadsPerGene.out.tab >> tempgene_stats
-    mv tempgene_counts ${meta}.ReadsPerGene.out.tab
-    mv tempgene_stats ${meta}.ReadsPerGene.log.out
-    gzip ${meta}.SJ.out.tab ${meta}.ReadsPerGene.out.tab
+    echo -e "Gene\t${prefix}.Unstranded\t${prefix}.Antisense\t${prefix}.Sense" > tempgene_counts
+    tail -n +5 ${prefix}.ReadsPerGene.out.tab >> tempgene_counts
+    echo -e "Gene\t${prefix}.Unstranded\t${prefix}.Antisense\t${prefix}.Sense" > tempgene_stats
+    head -n +4 ${prefix}.ReadsPerGene.out.tab >> tempgene_stats
+    mv tempgene_counts ${prefix}.ReadsPerGene.out.tab
+    mv tempgene_stats ${prefix}.ReadsPerGene.log.out
+    gzip ${prefix}.SJ.out.tab ${prefix}.ReadsPerGene.out.tab
+
+    cat <<-END_VERSIONS > star_versions.yml
+    "${task.process}":
+        STAR: \$(echo \$(STAR --version 2>&1) | awk '{print \$2}' )
+    END_VERSIONS
     """
 }
