@@ -8,15 +8,21 @@ process run_fastp {
     tuple val(meta), path(reads)
 
     output:
-    tuple val(meta), path('*.fastp.fastq.gz') , emit: reads
-    tuple val(meta), path('*.json')           , emit: json
-    tuple val(meta), path('*.html')           , emit: html
-    tuple val(meta), path('*.log')            , emit: log
-    path "versions.yml"           , emit: versions
+    tuple val(meta), path('*.fastp.fastq.gz'),  emit: reads
+    tuple val(meta), path('*.json'),            emit: json
+    tuple val(meta), path('*.html'),            emit: html
+    tuple val(meta), path('*.log'),             emit: log
+    path "versions.yml",                        emit: versions
     
+    when:
+    task.ext.when == null || task.ext.when
+
     script:
+    def args = task.ext.args ?: ''
+    def prefix = task.ext.prefix ?: "${meta.id}"
+
     """
-    fastp -w $task.cpus -i ${reads[0]} -I ${reads[1]} -o ${meta}_R1.fastp.fastq.gz -O ${meta}_R2.fastp.fastq.gz -j ${meta}.fastp.json -h ${meta}.fastp.html --detect_adapter_for_pe 2> >(tee ${meta}.fastp.log >&2)
+    fastp -w $task.cpus -i ${reads[0]} -I ${reads[1]} -o ${prefix}_R1.fastp.fastq.gz -O ${prefix}_R2.fastp.fastq.gz -j ${prefix}.fastp.json -h ${prefix}.fastp.html --detect_adapter_for_pe 2> >(tee ${prefix}.fastp.log >&2)
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
