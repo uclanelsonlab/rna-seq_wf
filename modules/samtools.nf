@@ -107,13 +107,13 @@ process samtools_cram {
     path dict
     tuple val(meta), path(bam)
     tuple val(meta), path(log)
-    path(versions)
+    path versions
 
     output:
-    path "*.hg38_rna.normal.cram",        emit: rna_cram
-    path "*.hg38_rna.normal.cram.crai",   emit: rna_crai
-    path '*.log',                         emit: log
-    path "*versions.yml",                 emit: versions
+    tuple val(meta), path("*.hg38_rna.normal.cram"),        emit: rna_cram
+    tuple val(meta), path("*.hg38_rna.normal.cram.crai"),   emit: rna_crai
+    path '*.log',                                           emit: log
+    path "*versions.yml",                                   emit: versions
     
     when:
     task.ext.when == null || task.ext.when

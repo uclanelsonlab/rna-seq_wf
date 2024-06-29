@@ -46,7 +46,7 @@ process subread_featurecounts {
     
     cat <<-END_VERSIONS > featureCounts_versions.yml
     "${task.process}":
-        featureCounts: \$(echo \$(featureCounts --version 2>&1) | awk '{print \$2}' )
+        featureCounts: \$(echo \$(featureCounts -v 2>&1) | awk '{print \$2}' )
     END_VERSIONS
     """
 }

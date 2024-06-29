@@ -71,5 +71,5 @@ workflow {
     cram_ch = samtools_cram(download_human_ref_ch, mark_dup_ch)
 
     // Upload selected output files
-    upload_files(params.library, params.sample_name, params.output_bucket, rrna_samtools_flagstat_ch, globinrna_samtools_flagstat_ch, star_alignreads_ch)
+    upload_files(params.library, params.output_bucket, rrna_samtools_flagstat_ch, globinrna_samtools_flagstat_ch, star_alignreads_ch, feature_counts_ch, rnaseqc_ch, cram_ch)
 }
